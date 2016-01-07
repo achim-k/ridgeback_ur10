@@ -4,8 +4,23 @@
   <arg name="debug" default="false" />
     
   <!-- Remap follow_joint_trajectory -->
-  <remap from="arm_controller/follow_joint_trajectory" to="follow_joint_trajectory"/>
+  <remap unless="$(arg sim)" from="arm_controller/follow_joint_trajectory" to="follow_joint_trajectory"/>
   
+  <!-- Simulation nodes -->
+  <group if="$(arg sim)">
+    <remap from="/follow_joint_trajectory" to="/arm_controller/follow_joint_trajectory"/>
+    <!-- Fake Calibration -->
+    <node pkg="rostopic" type="rostopic" name="fake_joint_calibration"
+          args="pub /calibrated std_msgs/Bool true" />
+    
+    <!-- joint_state_controller -->
+    <rosparam file="$(find ur_gazebo)/controller/joint_state_controller.yaml" command="load"/>
+    <node name="joint_state_controller_spawner" pkg="controller_manager" type="spawner" args="joint_state_controller" />
+
+    <rosparam file="$(find ur_gazebo)/controller/arm_controller_ur10.yaml" command="load"/>
+    <node name="arm_controller_spawner" pkg="controller_manager" type="spawner" args="arm_controller" />
+  </group>
+
   <!-- Launch moveit -->
   <include file="$(find ridgeback_ur10_moveit)/launch/move_group.launch">
     <arg name="debug" default="$(arg debug)" />
